@@ -42,7 +42,8 @@ This is used to create a unidirectional data channel for the parent and child pr
 
 I imported only the **os** library, and the **re** library for dealing with regex.
 From the **os** library i specifically imported the system calls which were relevant for the assignment
-```
+
+```python
 import re
 from os import (
     execvp, # Start a command without specifying /bin/ + takes list(args)
@@ -62,7 +63,7 @@ from os import _exit
 
 I Declared some values for transparency
 
-```
+```python
 STDIN = 0
 STDOUT = 1
 STDERR = 2
@@ -76,7 +77,7 @@ CHILD = 0
 
 ### The main loop
 The main loop is continuing 
-```
+```python
 def main():
     while True:
         try:
@@ -90,7 +91,7 @@ def main():
 
 ### The tokenizer
 
-```
+```python
 
 def tokenize(cmd):
     if '|' in cmd:
@@ -107,7 +108,7 @@ def tokenize(cmd):
 
 ### The identifiers
 
-```
+```python
 def process(cmd):
     if 'cd' == cmd[0]:
         chdir(cmd[1])
@@ -116,7 +117,8 @@ def process(cmd):
     else:
         subprocess(cmd)
 ```
-```
+
+```python
 def subprocess(cmd):
     if type(cmd[0]) == list:
         piping(cmd)
@@ -126,7 +128,7 @@ def subprocess(cmd):
 
 ### The subprocesses
 
-```
+```python
 def normal(cmd):
     pid = fork()
     if pid > CHILD:
@@ -137,7 +139,7 @@ def normal(cmd):
         print('Command not found:', cmd)
 ```
 
-```
+```python
 def piping(cmd):
     reading, writing = pipe()
     pid = fork()
@@ -156,7 +158,7 @@ def piping(cmd):
 
 ### The command
 
-```
+```python
 def command(cmd):
     try:
         execvp(cmd[0].strip(), cmd)
