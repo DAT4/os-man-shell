@@ -7,9 +7,7 @@ from os import (
     pipe,   # Start pipe channel with in and out
     chdir,  # Changes the directory for parent and child
     dup2,   # Clones the in/out put of a NT
-    write,
-    read,
-    getcwd,
+    getcwd, # Is used to get the users current working directory
 )
 from os import _exit
 
@@ -25,7 +23,26 @@ def command(cmd):
         execvp(cmd[0].strip(), cmd)
     except OSError as e:
         print(e)
-    _exit(127) # This line is important to have or else the fork will not close.
+
+
+def pipechild(cmd, r1, w1):
+    r2, w2 = pipe()
+    pid2 = fork()
+    if pid2 > CHILD:
+        wait()
+        close(w2)
+        close(r1)
+        dup2(r2, STDIN)
+        dup2(w1, STDOUT)
+        command(cmd[len(cmd)-1])
+    elif pid2 == CHILD:
+        if len(cmd) > 2:
+            pipechild(cmd[:-1],r2,w2)
+        else:
+            close(r2)
+            dup2(w2, STDOUT)
+            command(cmd[0])
+            _exit(0)
 
 
 def piping(cmd):
@@ -35,13 +52,13 @@ def piping(cmd):
         wait()
         close(writing)
         dup2(reading, STDIN)
-        command(cmd[1])
-    if pid == CHILD:
-        close(reading)
-        dup2(writing, STDOUT)
-        command(cmd[0])
+        command(cmd[len(cmd)-1])
+        _exit(0)
+    elif pid == CHILD:
+        pipechild(cmd[:-1], reading, writing)
+        _exit(0)
     else:
-        print('Command not found:', cmd)
+        _exit(0)
 
 
 def normal(cmd):
@@ -50,22 +67,28 @@ def normal(cmd):
         wait()
     elif pid == CHILD:
         command(cmd)
+        _exit(0)
     else:
-        print('Command not found:', cmd)
+        _exit(0)
 
 
 def subprocess(cmd):
-    if type(cmd[0]) == list:
-        piping(cmd)
-    else:
-        normal(cmd)
+    pid = fork()
+    if pid > CHILD:
+        wait()
+    elif pid == CHILD:
+        if type(cmd[0]) == list:
+            piping(cmd)
+        else:
+            normal(cmd)
+        _exit(0)
 
 
 def process(cmd):
     if 'cd' == cmd[0]:
         chdir(cmd[1])
     elif 'exit' == cmd[0]:
-        exit()
+        exit(0)
     else:
         subprocess(cmd)
 
@@ -86,13 +109,14 @@ def tokenize(cmd):
 def main():
     while True:
         try:
-            process(tokenize(input(f'mama@com - /{getcwd().split("/")[-1]} $ ')))
+            directory   = getcwd().split("/")[-1]
+            command     = input(f'.../{directory} % ')
+            command     = tokenize(command)
+            process(command)
         except IndexError:
             pass
         except KeyboardInterrupt:
             print()
             continue
-            
-
 
 main()

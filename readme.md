@@ -76,12 +76,14 @@ CHILD = 0
 ## The functions
 
 ### The main loop
-The main loop is continuing 
 ```python
 def main():
     while True:
         try:
-            process(tokenize(input(f'mama@com - /{getcwd().split("/")[-1]} $ ')))
+            directory   = getcwd().split("/")[-1]
+            command     = input(f'.../{directory} % ')
+            command     = tokenize(command)
+            process(command)
         except IndexError:
             pass
         except KeyboardInterrupt:
@@ -91,8 +93,8 @@ def main():
 
 ### The tokenizer
 
-```python
 
+```python
 def tokenize(cmd):
     if '|' in cmd:
         cmd = [x.strip() for x in cmd.split('|')]
@@ -106,7 +108,7 @@ def tokenize(cmd):
         return cmd
 ```
 
-### The identifiers
+### The identifier
 
 ```python
 def process(cmd):
@@ -118,15 +120,25 @@ def process(cmd):
         subprocess(cmd)
 ```
 
+### The subprocesses
+
+#### First level subprocess
+
 ```python
 def subprocess(cmd):
-    if type(cmd[0]) == list:
-        piping(cmd)
-    else:
-        normal(cmd)
+    pid = fork()
+    if pid > CHILD:
+        wait()
+    elif pid == CHILD:
+        if type(cmd[0]) == list:
+            piping(cmd)
+        else:
+            normal(cmd)
+        _exit(0)
 ```
 
-### The subprocesses
+
+#### No piping
 
 ```python
 def normal(cmd):
@@ -135,11 +147,35 @@ def normal(cmd):
         wait()
     elif pid == CHILD:
         command(cmd)
+        _exit(0)
     else:
         print('Command not found:', cmd)
+        _exit(0)
 ```
 
+#### Piping 
+
 ```python
+def pipechild(cmd, r1, w1):
+    r2, w2 = pipe()
+    pid2 = fork()
+    if pid2 > CHILD:
+        wait()
+        close(w2)
+        close(r1)
+        dup2(r2, STDIN)
+        dup2(w1, STDOUT)
+        command(cmd[len(cmd)-1])
+    elif pid2 == CHILD:
+        if len(cmd) > 2:
+            pipechild(cmd[:-1],r2,w2)
+        else:
+            close(r2)
+            dup2(w2, STDOUT)
+            command(cmd[0])
+            _exit(0)
+
+
 def piping(cmd):
     reading, writing = pipe()
     pid = fork()
@@ -147,13 +183,12 @@ def piping(cmd):
         wait()
         close(writing)
         dup2(reading, STDIN)
-        command(cmd[1])
-    if pid == CHILD:
-        close(reading)
-        dup2(writing, STDOUT)
-        command(cmd[0])
+        command(cmd[len(cmd)-1])
+    elif pid == CHILD:
+        pipechild(cmd[:-1], reading, writing)
+        _exit(0)
     else:
-        print('Command not found:', cmd)
+        _exit(0)
 ```
 
 ### The command
