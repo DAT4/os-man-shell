@@ -1,4 +1,4 @@
-import re
+import re, sys
 from os import (
     execvp, # Start a command without specifying /bin/ + takes list(args)
     wait,   # Wait for child process to finish
@@ -8,14 +8,14 @@ from os import (
     chdir,  # Changes the directory for parent and child
     dup2,   # Clones the in/out put of a NT
     getcwd, # Is used to get the users current working directory
+    _exit,  # This one is used to end the child processes when they are done.
 )
-from os import _exit
 
-STDIN = 0
-STDOUT = 1
-STDERR = 2
+STDIN   = 0
+STDOUT  = 1
+STDERR  = 2
 
-CHILD = 0
+CHILD   = 0
 
 
 def command(cmd):
@@ -88,7 +88,7 @@ def process(cmd):
     if 'cd' == cmd[0]:
         chdir(cmd[1])
     elif 'exit' == cmd[0]:
-        exit(0)
+        sys.exit()
     else:
         subprocess(cmd)
 
@@ -118,5 +118,6 @@ def main():
         except KeyboardInterrupt:
             print()
             continue
+
 
 main()
