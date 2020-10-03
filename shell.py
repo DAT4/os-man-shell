@@ -1,20 +1,6 @@
 from re import search
-from os import (
-    execvp,
-    wait,
-    fork,
-    close,
-    pipe,
-    chdir,
-    dup2,
-    getcwd,
-    _exit,
-)
-
-STDIN   = 0
-STDOUT  = 1
-STDERR  = 2
-CHILD   = 0
+from os import execvp,wait,fork,close,pipe,chdir,dup2,getcwd,_exit
+STDIN,STDOUT,STDERR,CHILD = 0,1,2,0
 
 class Shell:
     '''A working linux shell with pipe functionality.'''
@@ -29,14 +15,10 @@ class Shell:
         while True:
             try:
                 directory   = getcwd().split("/")[-1]
-                command     = input(f'./{directory} % ')
-                command     = self.tokenize(command)
+                command     = self.tokenize(input(f'./{directory} % '))
                 self.process(command)
-            except IndexError:
+            except:
                 pass
-            except KeyboardInterrupt:
-                print()
-                continue
 
     def tokenize(self, cmd):
         '''
@@ -58,7 +40,7 @@ class Shell:
         else:
             cmd = [x.strip() for x in cmd.split()]
             return cmd
-
+    
     def process(self, cmd):
         '''
         Figuring out if it is necessary to launch a child process.
@@ -67,35 +49,28 @@ class Shell:
             chdir(cmd[1])
         elif 'exit' == cmd[0]:
             _exit(0)
+        elif 'help' == cmd[0]:
+            pass
         else:
-            pid = fork()
-            if pid > CHILD:
-                wait()
-            elif pid == CHILD:
-                if type(cmd[0]) == list:
-                    self.piping(cmd)
-                else:
-                    self.command(cmd)
-    
-    def piping(self, cmd):
+            self.subprocess(cmd)
+
+    def subprocess(self, cmd):
         '''
-        Creates the first level of pipe channels, and executes the last
-        command in parrent.
+        Launching a subprocess with fork, and check wheather to run pipe or not
         '''
-        reading, writing = pipe()
         pid = fork()
         if pid > CHILD:
             wait()
-            close(writing)
-            dup2(reading, STDIN)
-            self.command(cmd[len(cmd)-1])
         elif pid == CHILD:
-            self.pipechild(cmd[:-1], reading, writing)
+            if type(cmd[0]) == list:
+                self.pipe(cmd)
+            else:
+                self.command(cmd)
             _exit(0)
         else:
             _exit(0)
-    
-    def pipechild(self, cmd, r1, w1):
+
+    def pipe(self, cmd, outer_reading=None, outer_writing=None):
         '''
         Pipes one to many commands and writes to outer scope pipe channel
 
@@ -109,23 +84,29 @@ class Shell:
         the output of all commands on the list will be collected in w1 from the
         outer scope of the method, which should be the piping() method.
         '''
-        r2, w2 = pipe()
+        reading, writing = pipe()
         pid = fork()
         if pid > CHILD:
             wait()
-            close(w2)
-            close(r1)
-            dup2(r2, STDIN)
-            dup2(w1, STDOUT)
+            self.copy(writing,reading,STDIN)
+            if outer_reading is not None: self.copy(outer_reading, outer_writing)
             self.command(cmd[len(cmd)-1])
         elif pid == CHILD:
             if len(cmd) > 2:
-                self.pipechild(cmd[:-1],r2,w2)
+                self.pipe(cmd[:-1], reading, writing)
             else:
-                close(r2)
-                dup2(w2, STDOUT)
+                self.copy(reading,writing)
                 self.command(cmd[0])
             _exit(0)
+        else:
+            _exit(0)
+
+    def copy(self, _close, _duplicate, fd=STDOUT):
+        '''
+        Closes one end of a pipe and uses the other end to copy data to a file descriptor
+        '''
+        close(_close)
+        dup2(_duplicate, fd)
     
     def command(self, cmd):
         '''
@@ -136,6 +117,8 @@ class Shell:
         '''
         try:
             execvp(cmd[0].strip(), cmd)
-        except OSError as e:
-            print(e)
+        except OSError:
+            print('Command not found.')
             _exit(0)
+
+s = Shell()
