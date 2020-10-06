@@ -15,7 +15,7 @@ def my_fork(child, parrent=lambda:None):
     pid = fork() 
     if pid > CHILD: wait(); parrent()
     elif pid == CHILD: child()
-    else: _exit(127)
+    else: _exit(1)
 
 def my_pipe(cmd, _r=None, _w=None):
     def parrent():
