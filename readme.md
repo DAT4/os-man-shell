@@ -1,11 +1,3 @@
----
-title: "Shell with pipe"
-author: "Martin Mårtensson"
-date: October 06, 2020
-geometry: margin=1.5cm
-output: pdf_document
-github: https://github.com/dat4/os-man-shell
----
 # Shell w. Pipe
 
 ## Manual
@@ -132,7 +124,6 @@ stdin, stdout and child has been declared for transparency.
 STDIN,STDOUT,CHILD = 0,1,0
 ```
 
-\pagebreak
 ### command
 
 ```python
@@ -187,7 +178,6 @@ This is the function with responsibility for forking.
 + Else if pid is less than 0 it means that an error occurred and the process will exit with the exit code 1 which means something abnormal happened.
 
 
-\pagebreak
 ### my_pipe
 
 ```python
