@@ -1,8 +1,14 @@
+---
+title: "Shell with pipe"
+author: "Martin Mårtensson"
+date: October 06, 2020
+geometry: margin=1.5cm
+output: pdf_document
+github: https://github.com/dat4/os-man-shell
+---
 # Shell w. Pipe
 
 ## Manual
-
-### Quick start
 
 Execute the `shell.py` with 
 
@@ -60,6 +66,7 @@ The shell also has the functionality of piping, which means you can take the out
 So to give an example, we can use the command that we used before, to get an output, and then use that input in another command. That other command could be awk.
 
 Example:
+
 ```bash
 ls -l / | awk '{print $9 "\t" $3}'
 ```
@@ -71,6 +78,7 @@ This command will take the output of `ls -l /` and redirect it to a pipe which w
 So to give an example, we can use the commands that we used before, and then use `sort -r`, to present the output in reversed alphabetic order.
 
 Example:
+
 ```bash
 ls -l / | awk '{print $9 "\t" $3}' | sort -r
 ```
@@ -100,6 +108,11 @@ All other functions return `None` because their only responsibility is to run sy
 
 ### Libraries
 
+```python
+from re import search
+from os import execvp,wait,fork,close,pipe,chdir,dup2,getcwd,_exit
+```
+
 + The `search` function from `re` library is also used to help tokenizing the user-input.
 + The most important library in the imports is the `os` library which includes the functions used to communicate directly with the Linux kernel (the system calls). 
     + `execvp` replaces current process with new process image.
@@ -111,11 +124,6 @@ All other functions return `None` because their only responsibility is to run sy
     + `getcwd` copies the absolute path of the current working directory to STDOUT
     + `_exit` terminates the current process
 
-```python
-from re import search
-from os import execvp,wait,fork,close,pipe,chdir,dup2,getcwd,_exit
-```
-
 ### Default values
 
 stdin, stdout and child has been declared for transparency.
@@ -124,7 +132,14 @@ stdin, stdout and child has been declared for transparency.
 STDIN,STDOUT,CHILD = 0,1,0
 ```
 
-### function:`command(cmd: list)`
+\pagebreak
+### command
+
+```python
+def command(cmd):
+    try: execvp(cmd[0].strip(), cmd)
+    except OSError: print('Command not found.'); _exit(127)
+```
 This function has been made to avoid redundancy and to improve flexibility in the program.
 
 + First the function takes a command of type `list`
@@ -135,20 +150,7 @@ This function has been made to avoid redundancy and to improve flexibility in th
     + and the command will print "Command not found!" Because that is almost always the reason that this error is raised. 
     + also the exit code takes the number 127 which is an exit code that will imply that the command was not found.
 
-```python
-def command(cmd):
-    try: execvp(cmd[0].strip(), cmd)
-    except OSError: print('Command not found.'); _exit(127)
-```
-
-### function: `copy(_close:int, _duplicate:int, fd:int=STDOUT)`
-This function has also been made to avoid redundancy and to improve flexibility in the program.
-
-+ First the function takes a file-descriptor as a parameter, this file-descriptor is gonna be closed
-+ Secondly the function takes another file-descriptor as a parameter, this file-descriptor is gonna be taking the place of the third file-descriptor in the parameters.
-+ Lastly the function takes a third file-descriptor as a parameter, this file-descriptor is gonna stand down, and let the second file-descriptor in the parameters take over.
-
-_the last parameter id set to `STDOUT` pr. default because it is the file-descriptor mostly used_
+### copy
 
 ```python
 
@@ -157,15 +159,15 @@ def copy(_close, _duplicate, fd=STDOUT):
     dup2(_duplicate, fd)
 ```
 
-### function: `fork(child:func, parent:func=lambda:None)`
-This is the function with responsibility for forking. 
+This function has also been made to avoid redundancy and to improve flexibility in the program.
 
-+ First the function takes 2 other functions in its parameters
-    + a child function which will be responsible for executing stuff in the child process.
-    + a parent function which will be responsible for executing stuff in the parent process.
-+ If the pid of the fork() is greater than `CHILD` which is 0, then the process will wait for child to finish. 
-+ Else if pid is 0 then `child()` will run, lastly
-+ Else if pid is less than 0 it means that an error occurred and the process will exit with the exit code 1 which means something abnormal happened.
++ First the function takes a file-descriptor as a parameter, this file-descriptor is gonna be closed
++ Secondly the function takes another file-descriptor as a parameter, this file-descriptor is gonna be taking the place of the third file-descriptor in the parameters.
++ Lastly the function takes a third file-descriptor as a parameter, this file-descriptor is gonna stand down, and let the second file-descriptor in the parameters take over.
+
+_the last parameter id set to `STDOUT` pr. default because it is the file-descriptor mostly used_
+
+### fork
 
 ```python
 def my_fork(child, parrent=lambda:None):
@@ -175,7 +177,30 @@ def my_fork(child, parrent=lambda:None):
     else: _exit(1)
 ```
 
-### function `my_pipe(cmd: list, _r:int=None, _w:int=None)`
+This is the function with responsibility for forking. 
+
++ First the function takes 2 other functions in its parameters
+    + a child function which will be responsible for executing stuff in the child process.
+    + a parent function which will be responsible for executing stuff in the parent process.
++ If the pid of the fork() is greater than `CHILD` which is 0, then the process will wait for child to finish. 
++ Else if pid is 0 then `child()` will run, lastly
++ Else if pid is less than 0 it means that an error occurred and the process will exit with the exit code 1 which means something abnormal happened.
+
+
+\pagebreak
+### my_pipe
+
+```python
+def my_pipe(cmd, _r=None, _w=None):
+    def parrent():
+        if _r is not None: copy(_r, _w)
+        copy(w,r,STDIN); command(cmd[len(cmd)-1])
+    def child():
+        if len(cmd) > 2: my_pipe(cmd[:-1], r, w)
+        else: copy(r,w); command(cmd[0])
+    r, w = pipe()
+    my_fork(child,parrent)
+```
 
 This is a very advanced little recursive function.
 
@@ -221,23 +246,7 @@ _note: recursion will only happen if more than one pipe has been entered in the 
     + and then the final result will be printed to the screen.
 
 
-```python
-def my_pipe(cmd, _r=None, _w=None):
-    def parrent():
-        if _r is not None: copy(_r, _w)
-        copy(w,r,STDIN); command(cmd[len(cmd)-1])
-    def child():
-        if len(cmd) > 2: my_pipe(cmd[:-1], r, w)
-        else: copy(r,w); command(cmd[0])
-    r, w = pipe()
-    my_fork(child,parrent)
-```
-
-### function: `process(cmd: list)`
-This is the function which will see if the command issued by the user requires to run a `fork` and a `pipe` or if it is just a `cd` or `exit`
-
-+ If the command is a list of lists it means the command has pipes, because this is how the `tokenizer` function tokenizes the string given by the user.
-+ If exit is called then the system call `_exit(0)` will be run. 0 means that everything is OK.
+### process
 
 ```python
 def process(cmd):
@@ -245,15 +254,12 @@ def process(cmd):
     elif 'exit' == cmd[0]: exit(0)
     else: my_fork(lambda: my_pipe(cmd)) if type(cmd[0]) == list else my_fork(lambda: command(cmd))
 ```
+This is the function which will see if the command issued by the user requires to run a `fork` and a `pipe` or if it is just a `cd` or `exit`
 
-### function: `tokenizer(cmd: str)`
++ If the command is a list of lists it means the command has pipes, because this is how the `tokenizer` function tokenizes the string given by the user.
++ If exit is called then the system call `_exit(0)` will be run. 0 means that everything is OK.
 
-This is a simpler recursive function which has responsibility for tokenizing strings into something that the rest of the program can understand.
-
-+ First the function checks for pipes
-+ if there is a pipe then the function will split the string for each pipe-sign into a list of strings, and then call itself for each string in the list. (which will now be without a pipe-sign) and then lastly return everything as a list of lists.
-+ if there is no pipe-sign in the string then the function will use regex to check if there is a defined string in the command ('string')(only single quotes are allowed) it will then return a list splitted for each space except for spaces in the defined string which will be in the list as a string for itself.
-+ Lastly if there is no pipes and no strings, then the function will just split the string for each space into a list of strings, and strip potential whitespace that might occure.
+### tokenizer
 
 ```python
 def tokenize(cmd):
@@ -262,17 +268,24 @@ def tokenize(cmd):
     else: return [x.strip() for x in cmd.split()]
 ```
 
-### The main loop
+This is a simpler recursive function which has responsibility for tokenizing strings into something that the rest of the program can understand.
 
-This loop will go on until the process somehow will be terminated.
-+ First the program will print the current working directory and wait for user input, which will be passed into the `tokenizer` function which will return its output into the `process` function.
-+ If the user just presses enter then the program will encounter an `IndexError` because functions later in the flow will look for specific indexes in the `cmd` list this will be overlooked and `pass`ed by `except`
++ First the function checks for pipes
++ if there is a pipe then the function will split the string for each pipe-sign into a list of strings, and then call itself for each string in the list. (which will now be without a pipe-sign) and then lastly return everything as a list of lists.
++ if there is no pipe-sign in the string then the function will use regex to check if there is a defined string in the command ('string')(only single quotes are allowed) it will then return a list splitted for each space except for spaces in the defined string which will be in the list as a string for itself.
++ Lastly if there is no pipes and no strings, then the function will just split the string for each space into a list of strings, and strip potential whitespace that might occure.
+
+### The main loop
 
 ```python
 while True:
     try: process(tokenize(input(f'./{getcwd().split("/")[-1]} % ')))
     except IndexError: pass
 ```
+
+This loop will go on until the process somehow will be terminated.
++ First the program will print the current working directory and wait for user input, which will be passed into the `tokenizer` function which will return its output into the `process` function.
++ If the user just presses enter then the program will encounter an `IndexError` because functions later in the flow will look for specific indexes in the `cmd` list this will be overlooked and `pass`ed by `except`
 
 ## Bibliography
 
