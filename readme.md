@@ -127,12 +127,18 @@ STDIN,STDOUT,CHILD = 0,1,0
 ### function:`command(cmd: list)`
 This function has been made to avoid redundancy and to improve flexibility in the program.
 
-First the function takes a command of type `list` and then tries to run the `execvp(cmd_name: str, cmd: list)` which will will replace the current process and try to execute a command from the operating system. If any error will appear during the execution of `execvp` then it will return an `OSException` and the command will print "Command not found!" Because that is almost always the reason that this error is raised.
++ First the function takes a command of type `list`
++ Then it tries to run the `execvp(cmd_name: str, cmd: list)`
+    + which will will replace the current process 
+    + and try to execute a command from the operating system. 
++ If any error will appear during the execution of `execvp`, the function will raise an `OSException`
+    + and the command will print "Command not found!" Because that is almost always the reason that this error is raised. 
+    + also the exit code takes the number 127 which is an exit code that will imply that the command was not found.
 
 ```python
 def command(cmd):
     try: execvp(cmd[0].strip(), cmd)
-    except OSError: print('Command not found.'); _exit(0)
+    except OSError: print('Command not found.'); _exit(127)
 ```
 
 ### function: `copy(_close:int, _duplicate:int, fd:int=STDOUT)`
@@ -154,40 +160,65 @@ def copy(_close, _duplicate, fd=STDOUT):
 ### function: `fork(child:func, parent:func=lambda:None)`
 This is the function with responsibility for forking. 
 
-First the function takes 2 other functions in its parameters
-+ a child function which will be responsible for executing stuff in the child process.
-+ a parent function which will be responsible for executing stuff in the parent process.
-
-If the pid of the fork() is greater than `CHILD` which is 0, then the process will wait for child to finish. Else if pid is 0 then `child()` will run, lastly if pid is less than 0 it means that an error occurred and the process will exit.
++ First the function takes 2 other functions in its parameters
+    + a child function which will be responsible for executing stuff in the child process.
+    + a parent function which will be responsible for executing stuff in the parent process.
++ If the pid of the fork() is greater than `CHILD` which is 0, then the process will wait for child to finish. 
++ Else if pid is 0 then `child()` will run, lastly
++ Else if pid is less than 0 it means that an error occurred and the process will exit with the exit code 1 which means something abnormal happened.
 
 ```python
 def my_fork(child, parrent=lambda:None):
     pid = fork() 
     if pid > CHILD: wait(); parrent()
     elif pid == CHILD: child()
-    else: _exit(0)
+    else: _exit(1)
 ```
 
 ### function `my_pipe(cmd: list, _r:int=None, _w:int=None)`
 
 This is a very advanced little recursive function.
 
-Scope has to be considered since there will be a lot of pipe channels flying around when more than one pipe is launched. 
+_note: recursion will only happen if more than one pipe has been entered in the command line_
 
-+ Firstly the function takes a list as an argument, the list is a list of lists, and can be from 2 to `infinite` long. The first time the function is called it will be without outer pipe-channels `_r` for outer_reading and `_w` for outer_writing.
-+ Then two inner functions are declared, remember about the scope, it is important. 
+**Walking into recursion**
++ Firstly the function takes a `list` as an argument, 
+    + The `list` is a list of lists of strings, and can be from 2 to `infinite` long. 
+    + The first time the function is called it will be without the outer pipe-channels 
+        + `_r` for outer_reading and 
+        + `_w` for outer_writing.
++ Then two inner functions are declared.
     + The functions have access to the variables declared inside their container function, 
-        + and this means all the pipe channels.
+    + this means all 4 pipe channels.
 + Then the first pipe is made
-+ The `parent` and `child` functions are passed into `my_fork()` which will create a fork which will execute `child()` first and then `parent()`
-+ Inside child we will check if the list of commands which is also a list) are longer than 2. 
++ The `parent` and `child` functions are passed into `my_fork()`
+    + which will create a fork 
+        + which will execute `child()` first i
+        + and then `parent()`
++ Inside `child` we will check if the `list` of commands is longer than 2. 
     + If `True` then the function will call itself but slice away the last command from the list which will be run in the current child process's belonging parent process, later. 
     + Also the pipe-channel belonging to the current process pair, will be passed into the function call's parameter. 
-    This means that the function will keep on spawning new pipes, and processes, and each **n** process will be able to communicate with the **n+1**th process through the outer pipe-channels.
-+ When all pipes has been run through and there is only 2 commands left in the list, then all parent processes will be waiting for the child processes to finish and the last child process will skip the if statement and go to the else statement whare it will execute the first command in the list of commands.
-+ Then `copy(r,w)` will do its job, and the parent process will run
-+ If there is more than one pipe then the outer channels will not be `None` and the outer `pipein` (named `_r`) will close and outer `pipeout` will take input from stdout, at the same time the inner `pipeout` will close and the inner `pipein` will put its data that it got from the child process's `execvp` command, into the stdin which will be used as argument in the `execvp` which will now be run, in the parrent process. 
-+ And then all the parrent processes for each child process will repeat the same until we are all the way back to the first parrent process wich will be waiting to execute the last command in the list of commands which were originally passed into the outermost `my_pipe` and because this function does not have a outer `pipe` then the STDOUT will not be redirected by `dup2` and the final result will be printed to the screen.
+        + This means that the function will keep on spawning new pipes, and processes, and each **n**th process will be able to communicate with the **n+1**th process through the outer pipe-channels.
+
+**Walking out of recursion**
+
++ When all `pipes` has been run through and there is only 2 commands left in the `list`,
++ then all `parent` processes will be waiting for the `child` processes to finish and the last `child` process will **skip the if statement** and go to the else statement 
+    + where it will execute the first command in the `list` of commands.
++ Then `copy(r,w)` will do its job, and the parent process will run.
++ If there is more than one pipe 
+    + then the outer channels will not be `None` 
+    + and the outer `pipein` (named `_r`) will close 
+    + and outer `pipeout` will take input from `STDOUT`, 
+    + at the same time the inner `pipeout` will close 
+    + and the inner `pipein` will put its data that it got from the `child` process's `execvp` command, into the `STDIN` which will be used as argument in the `execvp` which will now be run, in the `parent` process. 
++ And then all the `parent` processes for each `child` process will repeat the same 
++ until we are all the way back to the first `parent` process 
+    + which will be waiting to execute the last command in the `list` of commands 
+    + which were originally passed into the outermost `my_pipe` 
+    + and because this function does not have a outer `pipe` 
+    + then the `STDOUT` will not be redirected by `dup2` 
+    + and then the final result will be printed to the screen.
 
 
 ```python
@@ -246,6 +277,7 @@ while True:
 ## Bibliography
 
 + I have used [the python documentation](https://docs.python.org/3/library/os.html) as a reference to learn about the system calls
++ I got some inspiration from this Stack Overflow question [How to use pipes an redirects using os.execv(), if possible?](https://stackoverflow.com/questions/46598710/how-to-use-pipes-and-redirects-using-os-execv-if-possible)
 + I asked two questions on Stack Overflow regarding the assignment, and I guess they should be in the bibliography as well. 
     + [How to pipe the output of execvp to variable in Python](https://stackoverflow.com/questions/63936179/how-to-pipe-the-output-of-execvp-to-variable-in-python)
     + [How to deal with multiple pipes in shell program?](https://stackoverflow.com/questions/63955905/how-to-deal-with-mutliple-pipes-in-shell-program)

@@ -5,7 +5,7 @@ STDIN,STDOUT,CHILD = 0,1,0
 
 def command(cmd):
     try: execvp(cmd[0].strip(), cmd)
-    except OSError: print('Command not found.'); _exit(0)
+    except OSError: print('Command not found.'); _exit(127)
 
 def copy(_close, _duplicate, fd=STDOUT):
     close(_close)
