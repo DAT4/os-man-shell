@@ -1,15 +1,18 @@
 # Shell w. Pipe
 
 ## Manual
+
+### Quick start
+
 Execute the `shell.py` with 
 
 ```bash
 python shell.py
 ```
 
-Then you will be presented with a shell which will be ready to accept your input.
+Then you will be presented with a fully functional shell, which is ready to accept your input.
 
-It will look something like this
+It will look something like this:
 
 ```bash
 ./your_path % 
@@ -19,23 +22,26 @@ You can now run any Linux command on your system.
 
 Here is some inspiration:
 
-+ ls (list directory contents)
-+ cd (change directory)
-+ cat (concatenate files and print to stdout)
-+ grep (print lines that mach patterns) 
-+ awk (pattern scanning and text processing language)
-+ sort (sort lines of text files)
-+ vim (A programmer's text editor)
++ `ls` (list directory contents)
++ `cd` (change directory)
++ `cat` (concatenate files and print to stdout)
++ `grep` (print lines that mach patterns) 
++ `awk` (pattern scanning and text processing language)
++ `sort` (sort lines of text files)
++ `vim` (A programmer's text editor)
 
 And many more.
+
+> The Reason this works is because the python program is launching system calls which means the program speaks directly to the kernel (Linux) of the operating system.
 
 ### Run a command
 To run a command, you just need to type in the name of the command and possible arguments 
 
+
 Example:
 
 ```bash
-./your_path % ls -l /
+ls -l /
 ```
 
 This command will list the root directory of your Linux file system.
@@ -46,6 +52,8 @@ That's it.
 
 ### Piping commands
 The shell also has the functionality of piping, which means you can take the output of one command, and pass it into the input of another command.
+
+> Piping is a system call, which makes it possible to communicate data between processes on the OS.
 
 #### A single pipe
 
@@ -75,21 +83,33 @@ So basically the same happens, here.
 + The output of sort doesn't have a pipe so it will be passed to stdout and the final result will be printed on the screen
 
 ## Implementation
-**This section is written as an alternative to commenting my code**
+**This section is written as an alternative to commenting the code **
 
-Implementation of the project has been done in python, because python has a way to directly communicate with the Linux system through system-calls. Another reason is because, in python it is easy to work with strings and lists which is used a lot in this program while tokenizing the commands and later for dealing with them.
+Implementation of the project has been done in python, because 
++ python has a way to directly communicate with the Linux system through system-calls. 
++ Another reason is because, in python it is easy to work with strings and lists which is used a lot in this program while tokenizing the commands and later for dealing with them.
 
 Some important python features used are:
 + Slicing of a list `list[x:i]`
 + String cleaning with `str.strip()`
 + String splitting with `str.split()`
 
-All functions return `None`
+The `tokenizer` function which is responsible for setting up the command returns a list of strings or a list of lists of strings. 
+
+All other functions return `None` because their only responsibility is to run system-calls in the right order, based on the command given by the user.
 
 ### Libraries
 
-+ The most important library in the imports is the `os` library which includes the functions used to communicate directly with the Linux kernel. 
 + The `search` function from `re` library is also used to help tokenizing the user-input.
++ The most important library in the imports is the `os` library which includes the functions used to communicate directly with the Linux kernel (the system calls). 
+    + `execvp` replaces current process with new process image.
+    + `wait` makes the current process wait for its child process to change state/finish.
+    + `fork` creates a new process by duplicating the current process.
+    + `close` closes a file descriptor.
+    + `pipe` creates a uni directional data channel in/out
+    + `dup2` creates a copy of one file descriptor and redirects it to another file descriptor.
+    + `getcwd` copies the absolute path of the current working directory to STDOUT
+    + `_exit` terminates the current process
 
 ```python
 from re import search
