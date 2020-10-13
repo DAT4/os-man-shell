@@ -36,7 +36,7 @@ void printcwd()
     }
     else
     {
-        printf("/ %% ");
+        printf("/. %% ");
     }
 }
 
