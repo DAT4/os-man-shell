@@ -30,7 +30,14 @@ void printcwd()
     tokenizer(cwd, "/", path);
     int i = 0;
     while(path[i] != NULL) i++;
-    printf("./%s %% ", path[i-1]);
+    if(path[0] != NULL)
+    {
+        printf("./%s %% ", path[i-1]);
+    }
+    else
+    {
+        printf("/ %% ");
+    }
 }
 
 /*
