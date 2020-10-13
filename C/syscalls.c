@@ -23,6 +23,7 @@ void process(char ***command_array)
         else
         {
             execvp(command_array[0][0], command_array[0]);
+            puts("Command not found!");
             exit(127);
         }
     }
@@ -56,6 +57,7 @@ void piping(char ***command_array, int i, int *pipefd_outer)
         close(pipefd[1]);
         dup2(pipefd[0], 0);
         execvp(command_array[i][0], command_array[i]);
+        puts("Command not found!");
         exit(127);
     }
     else if (pid == 0)
@@ -70,6 +72,7 @@ void piping(char ***command_array, int i, int *pipefd_outer)
             close(pipefd[0]);
             dup2(pipefd[1], 1);
             execvp(command_array[i-1][0], command_array[i-1]);
+            puts("Command not found!");
             exit(127);
         }
     }
