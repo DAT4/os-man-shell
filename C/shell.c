@@ -3,6 +3,7 @@
 #include "syscalls.c"
 
 void command();
+void printcwd();
 
 /*
  * The main loop where the user inputs the commands
@@ -13,12 +14,28 @@ int main()
     {
         char line[1024] = "";
         char **command_array[1024] = {NULL};
+        printcwd();
         fgets(line, 1024, stdin);
         handle_string(line, command_array);
         command(command_array);
         freedom(command_array);
     }
     return 0;
+}
+
+/*
+ * will print the last folder in
+ * the current working directory.
+ * */
+void printcwd()
+{
+    char *path[1024];
+    char cwd[1024];
+    getcwd(cwd, 1024);
+    tokenizer(cwd, "/", path);
+    int i = 0;
+    while(path[i] != NULL) i++;
+    printf("./%s %% ", path[i-1]);
 }
 
 /*
