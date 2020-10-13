@@ -49,9 +49,7 @@ void command(char ***command_array)
     }
     else if (strstr(command_array[0][0], "cd"))
     {
-        char out[1024];
         chdir(command_array[0][1]);
-        getcwd(out, 1024);
     }
     else
     {
