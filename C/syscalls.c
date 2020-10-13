@@ -1,10 +1,4 @@
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
-void piping();
-void process();
+#include "syscalls.h"
 
 /*
  * The first sub process is created and if pipe is 
