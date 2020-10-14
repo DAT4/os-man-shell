@@ -1,4 +1,9 @@
-#include "shell.h"
+#include <stdio.h>
+#include "strings.c"
+#include "syscalls.c"
+
+void command();
+void printcwd();
 
 /*
  * The main loop where the user inputs the commands

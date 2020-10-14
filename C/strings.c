@@ -1,6 +1,10 @@
 #include <string.h>
 #include <stdlib.h>
-#include "strings.h"
+
+void freedom();
+void tokenizer();
+char ** tkn_command();
+void handle_string();
 
 /*
  * Gets the user input directly and checks if it has
